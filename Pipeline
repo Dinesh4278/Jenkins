@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('checkout') {
+            steps {
+                git 'https://github.com/dinu-359/jenkins-java-project.git'              //Github repo of the application to be deployed
+            }
+        }
+        stage('build') {
+            steps {
+                sh 'mvn compile'
+            }
+        }
+        stage('test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+        stage('artifact') {
+            steps {
+                sh 'mvn package'
+            }
+        }
+        stage('Nexus') { 
+            steps {
+                nexusArtifactUploader artifacts: [[artifactId: 'NETFLIX', classifier: '', file: 'target/NETFLIX-1.2.2.war', type: '.war']], credentialsId: '0398b1f2-7afc-4e8d-8ce8-9bfee980efb5', groupId: 'in.RAHAM', nexusUrl: '54.237.124.246:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'netflix', version: '1.2.2'  
+                //it is used to backup the artifact to the nexus server
+            }
+        }
+        stage('deploy') {
+            steps {
+                deploy adapters: [
+                    tomcat9(
+                        credentialsId: 'fe8240f3-e14b-4304-b4d9-d379a9b44188',    //Credentials of the tomcat server
+                        path: '',
+                        url: 'http://3.94.205.96:8080/'                          //IP address of the tomcat server
+                    )
+                ],
+                contextPath: 'netflix',                                          //It will be the name of the deployment
+                war: 'target/*.war'                                              //Location of the .war file 
+            }
+        }
+    }
+    post {
+        success {
+            sh 'Deployment has successfully completed'
+        }
+    }
+}
